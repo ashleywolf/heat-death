@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Heat Death</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000;
+      --fg: #f5f7ff;
+      --muted: rgba(230, 236, 255, 0.72);
+      --panel: rgba(9, 12, 20, 0.7);
+      --stroke: rgba(255,255,255,0.08);
+      --glow: rgba(149, 184, 255, 0.45);
+      --accent: #8ac6ff;
+      --danger: #ff9060;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(31, 60, 120, 0.18), transparent 35%),
+        radial-gradient(circle at 80% 15%, rgba(170, 80, 180, 0.16), transparent 32%),
+        radial-gradient(circle at 50% 90%, rgba(20, 90, 130, 0.1), transparent 40%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #space {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+      background: #000;
+    }
+
+    .ui {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px;
+    }
+
+    .intro-wrap,
+    .topbar,
+    .results,
+    .audio-hint {
+      pointer-events: auto;
+    }
+
+    .intro-wrap {
+      margin: auto;
+      width: min(92vw, 640px);
+      padding: clamp(24px, 4vw, 40px);
+      border: 1px solid var(--stroke);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(8, 12, 20, 0.74), rgba(2, 4, 10, 0.88));
+      box-shadow:
+        0 32px 120px rgba(0,0,0,0.72),
+        0 0 0 1px rgba(255,255,255,0.02) inset,
+        0 0 80px rgba(88, 130, 255, 0.12);
+      backdrop-filter: blur(12px);
+      transition: opacity 600ms ease, transform 600ms ease;
+    }
+
+    .intro-wrap.hidden {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      color: rgba(201, 219, 255, 0.7);
+      margin-bottom: 18px;
+    }
+
+    .eyebrow::before {
+      content: '';
+      width: 42px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(148, 201, 255, 0.9));
+    }
+
+    h1 {
+      margin: 0;
+      font-family: 'Orbitron', 'Inter', sans-serif;
+      font-size: clamp(2.4rem, 7vw, 4.6rem);
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      text-shadow: 0 0 24px rgba(140, 190, 255, 0.22);
+    }
+
+    .subtitle {
+      margin: 18px 0 28px;
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 50ch;
+    }
+
+    .form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .field {
+      position: relative;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 18px 18px 18px 54px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: #fff;
+      outline: none;
+      font-size: 1rem;
+      transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+    }
+
+    .field input:focus {
+      border-color: rgba(126, 182, 255, 0.6);
+      box-shadow: 0 0 0 4px rgba(126, 182, 255, 0.12), 0 0 26px rgba(126, 182, 255, 0.18);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .field::before {
+      content: '@';
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.45);
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    button,
+    .button {
+      border: none;
+      border-radius: 18px;
+      padding: 17px 22px;
+      background: linear-gradient(180deg, rgba(150, 205, 255, 0.95), rgba(85, 135, 255, 0.88));
+      color: #04111f;
+      font-size: 0.97rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+      box-shadow: 0 10px 40px rgba(69, 125, 255, 0.35);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    button:hover,
+    .button:hover { transform: translateY(-1px); }
+    button:active,
+    .button:active { transform: translateY(1px) scale(0.99); }
+    button:disabled { opacity: 0.55; cursor: wait; transform: none; }
+
+    .muted-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: rgba(255,255,255,0.54);
+      font-size: 0.88rem;
+    }
+
+    .status {
+      margin-top: 16px;
+      min-height: 24px;
+      color: #ffe6d9;
+      font-size: 0.93rem;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(-16px);
+      transition: opacity 400ms ease, transform 400ms ease;
+    }
+
+    .topbar.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .phase-badge,
+    .user-chip,
+    .audio-hint {
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(8, 12, 20, 0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-transform: none;
+      letter-spacing: 0.02em;
+    }
+
+    .user-chip img {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 0 20px rgba(138, 198, 255, 0.18);
+    }
+
+    .topbar-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .audio-hint {
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      display: none;
+    }
+
+    .audio-hint.visible { display: inline-flex; }
+
+    .results {
+      align-self: flex-end;
+      width: min(100%, 1200px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 700ms ease, transform 700ms ease;
+      pointer-events: none;
+    }
+
+    .results.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .poster-card,
+    .share-card {
+      background: linear-gradient(180deg, rgba(7, 11, 18, 0.74), rgba(2, 4, 10, 0.92));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+    }
+
+    .poster-card {
+      padding: clamp(20px, 3vw, 28px);
+      min-height: 180px;
+      display: grid;
+      align-content: end;
+      gap: 12px;
+    }
+
+    .poster-meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: rgba(255,255,255,0.72);
+      font-size: 0.94rem;
+    }
+
+    .username-display {
+      font-family: 'Orbitron', 'Inter', sans-serif;
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: 0.95;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-shadow: 0 0 30px rgba(150, 205, 255, 0.28);
+    }
+
+    .severity {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .stat-label {
+      display: block;
+      color: rgba(255,255,255,0.54);
+      font-size: 0.74rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: clamp(1rem, 2vw, 1.35rem);
+      font-weight: 700;
+    }
+
+    .share-card {
+      min-width: min(100%, 280px);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-self: end;
+    }
+
+    .share-card h2 {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.68);
+    }
+
+    .share-card p {
+      margin: 0 0 4px;
+      color: rgba(255,255,255,0.62);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .share-card button,
+    .share-card .button.secondary,
+    .restart {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: none;
+    }
+
+    .share-card button.primary {
+      background: linear-gradient(180deg, rgba(150, 205, 255, 0.95), rgba(85, 135, 255, 0.88));
+      color: #04111f;
+      box-shadow: 0 10px 34px rgba(69, 125, 255, 0.28);
+    }
+
+    .share-status {
+      min-height: 20px;
+      font-size: 0.84rem;
+      color: rgba(255,255,255,0.62);
+    }
+
+    .restart {
+      max-width: 160px;
+      align-self: flex-start;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 400ms ease;
+    }
+
+    .restart.visible { opacity: 1; }
+
+    @media (max-width: 900px) {
+      .results {
+        grid-template-columns: 1fr;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .share-card {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .ui { padding: 14px; }
+      .intro-wrap { border-radius: 22px; }
+      .form { grid-template-columns: 1fr; }
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .topbar-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .poster-meta {
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="space" aria-hidden="true"></canvas>
+  <div class="ui">
+    <div class="topbar" id="topbar">
+      <div class="phase-badge" id="phaseBadge">Awaiting ignition</div>
+      <div class="topbar-right">
+        <button class="audio-hint" id="audioHint" type="button">Enable sound</button>
+        <div class="user-chip" id="userChip">
+          <img id="userAvatar" alt="" hidden>
+          <span id="userChipText">No target selected</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="intro-wrap" id="intro">
+      <div class="eyebrow">Cinematic activity collapse</div>
+      <h1>GitHub<br>Heat Death</h1>
+      <p class="subtitle">Feed it a GitHub username. Watch their public output collapse into a star, tear itself apart, and freeze into a poster you can save, copy, or share.</p>
+      <form class="form" id="userForm">
+        <label class="field">
+          <input id="usernameInput" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="torvalds" aria-label="GitHub username" required>
+        </label>
+        <button id="igniteButton" type="submit">Ignite sequence</button>
+      </form>
+      <div class="muted-row">
+        <span>Data: public GitHub API</span>
+        <span>Poster: 1200 x 630 PNG</span>
+        <span>Best with sound on</span>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <section class="results" id="results">
+      <div class="poster-card">
+        <div class="severity" id="severityTag">Stellar Forge</div>
+        <div class="username-display" id="usernameDisplay">@username</div>
+        <div class="poster-meta" id="posterMeta"></div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </div>
+      <div class="share-card">
+        <h2>Share the aftermath</h2>
+        <p>The nebula is frozen. Pull a poster, copy it to your clipboard, or send the direct link.</p>
+        <button class="primary" id="saveButton" type="button">Save image</button>
+        <button id="copyButton" type="button">Copy to clipboard</button>
+        <button id="shareButton" type="button">Share</button>
+        <button id="restartButton" class="restart" type="button">Run another</button>
+        <div class="share-status" id="shareStatus"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('space');
+      const ctx = canvas.getContext('2d');
+      const intro = document.getElementById('intro');
+      const results = document.getElementById('results');
+      const topbar = document.getElementById('topbar');
+      const phaseBadge = document.getElementById('phaseBadge');
+      const userChip = document.getElementById('userChip');
+      const userAvatar = document.getElementById('userAvatar');
+      const userChipText = document.getElementById('userChipText');
+      const statusEl = document.getElementById('status');
+      const shareStatus = document.getElementById('shareStatus');
+      const severityTag = document.getElementById('severityTag');
+      const usernameDisplay = document.getElementById('usernameDisplay');
+      const posterMeta = document.getElementById('posterMeta');
+      const statsGrid = document.getElementById('statsGrid');
+      const input = document.getElementById('usernameInput');
+      const form = document.getElementById('userForm');
+      const igniteButton = document.getElementById('igniteButton');
+      const saveButton = document.getElementById('saveButton');
+      const copyButton = document.getElementById('copyButton');
+      const shareButton = document.getElementById('shareButton');
+      const restartButton = document.getElementById('restartButton');
+      const audioHint = document.getElementById('audioHint');
+
+      const languageColors = {
+        JavaScript: '#ffd95b',
+        TypeScript: '#6cb4ff',
+        Python: '#6f8dff',
+        Rust: '#ff8a54',
+        Go: '#72f1ff',
+        Ruby: '#ff5f77',
+        Java: '#ff8f45',
+        'C#': '#c890ff',
+        PHP: '#a989ff',
+        C: '#b3c6ff',
+        'C++': '#83b7ff',
+        Shell: '#7dffa5',
+        Swift: '#ffa562',
+        Kotlin: '#b68cff',
+        Dart: '#69daff',
+        Elixir: '#caa1ff',
+        HTML: '#ff8b63',
+        CSS: '#78bcff',
+        Lua: '#7aa2ff',
+        Haskell: '#b08dff'
+      };
+
+      const phaseDurations = {
+        accretion: 4200,
+        collapse: 3600,
+        detonation: 3000,
+        nebula: 4200
+      };
+      const totalDuration = Object.values(phaseDurations).reduce((sum, value) => sum + value, 0);
+
+      const state = {
+        width: 0,
+        height: 0,
+        dpr: Math.min(window.devicePixelRatio || 1, 2),
+        starfield: [],
+        particles: [],
+        orbitLabels: [],
+        ripples: [],
+        lensFlare: [],
+        sequenceStart: 0,
+        phase: 'idle',
+        running: false,
+        frozenTime: 0,
+        shake: 0,
+        summary: null,
+        user: null,
+        repos: [],
+        palette: ['#8ac6ff', '#ff9060', '#ffe36f'],
+        posterDataUrl: '',
+        shareUrl: '',
+        autoRun: false,
+        pendingUser: '',
+        audioReady: false
+      };
+
+      const audio = {
+        ctx: null,
+        master: null,
+        ambient: null,
+        rumble: null,
+        phaseNoise: null,
+        started: false,
+        init() {
+          if (this.ctx) return;
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          this.ctx = new AudioCtx();
+          this.master = this.ctx.createGain();
+          this.master.gain.value = 0.18;
+          this.master.connect(this.ctx.destination);
+          this.ambient = this.ctx.createGain();
+          this.ambient.gain.value = 0;
+          this.ambient.connect(this.master);
+
+          const droneOsc = this.ctx.createOscillator();
+          droneOsc.type = 'sine';
+          droneOsc.frequency.value = 42;
+          const droneLfo = this.ctx.createOscillator();
+          droneLfo.type = 'sine';
+          droneLfo.frequency.value = 0.11;
+          const droneLfoGain = this.ctx.createGain();
+          droneLfoGain.gain.value = 6;
+          droneLfo.connect(droneLfoGain);
+          droneLfoGain.connect(droneOsc.frequency);
+          droneOsc.connect(this.ambient);
+          droneOsc.start();
+          droneLfo.start();
+
+          this.rumble = this.ctx.createGain();
+          this.rumble.gain.value = 0;
+          this.rumble.connect(this.master);
+          const rumbleOsc = this.ctx.createOscillator();
+          rumbleOsc.type = 'triangle';
+          rumbleOsc.frequency.value = 34;
+          const rumbleFilter = this.ctx.createBiquadFilter();
+          rumbleFilter.type = 'lowpass';
+          rumbleFilter.frequency.value = 120;
+          rumbleOsc.connect(rumbleFilter);
+          rumbleFilter.connect(this.rumble);
+          rumbleOsc.start();
+
+          this.phaseNoise = this.ctx.createGain();
+          this.phaseNoise.gain.value = 0;
+          this.phaseNoise.connect(this.master);
+          const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / data.length * 0.18);
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          noise.loop = true;
+          const noiseFilter = this.ctx.createBiquadFilter();
+          noiseFilter.type = 'bandpass';
+          noiseFilter.frequency.value = 240;
+          noiseFilter.Q.value = 0.8;
+          noise.connect(noiseFilter);
+          noiseFilter.connect(this.phaseNoise);
+          noise.start();
+
+          this.started = true;
+        },
+        async unlock() {
+          this.init();
+          if (!this.ctx) return false;
+          if (this.ctx.state === 'suspended') {
+            try {
+              await this.ctx.resume();
+            } catch (error) {
+              return false;
+            }
+          }
+          audioHint.classList.remove('visible');
+          state.audioReady = true;
+          return true;
+        },
+        setPhase(phase) {
+          if (!this.ctx || this.ctx.state !== 'running') return;
+          const now = this.ctx.currentTime;
+          if (phase === 'accretion') {
+            this.rumble.gain.cancelScheduledValues(now);
+            this.rumble.gain.linearRampToValueAtTime(0.14, now + 0.2);
+            this.ambient.gain.cancelScheduledValues(now);
+            this.ambient.gain.linearRampToValueAtTime(0.03, now + 0.4);
+            this.phaseNoise.gain.cancelScheduledValues(now);
+            this.phaseNoise.gain.linearRampToValueAtTime(0.012, now + 0.4);
+          } else if (phase === 'collapse') {
+            this.rumble.gain.cancelScheduledValues(now);
+            this.rumble.gain.linearRampToValueAtTime(0.2, now + 0.18);
+            this.phaseNoise.gain.cancelScheduledValues(now);
+            this.phaseNoise.gain.linearRampToValueAtTime(0.03, now + 0.24);
+          } else if (phase === 'detonation') {
+            this.explosionBurst();
+          } else if (phase === 'nebula') {
+            this.rumble.gain.cancelScheduledValues(now);
+            this.rumble.gain.linearRampToValueAtTime(0.01, now + 1.1);
+            this.phaseNoise.gain.cancelScheduledValues(now);
+            this.phaseNoise.gain.linearRampToValueAtTime(0.008, now + 1.2);
+            this.ambient.gain.cancelScheduledValues(now);
+            this.ambient.gain.linearRampToValueAtTime(0.06, now + 1.4);
+          } else {
+            this.rumble && this.rumble.gain.setValueAtTime(0, now);
+            this.phaseNoise && this.phaseNoise.gain.setValueAtTime(0, now);
+            this.ambient && this.ambient.gain.setValueAtTime(0.02, now);
+          }
+        },
+        explosionBurst() {
+          if (!this.ctx || this.ctx.state !== 'running') return;
+          const now = this.ctx.currentTime;
+          const burstGain = this.ctx.createGain();
+          burstGain.gain.setValueAtTime(0.0001, now);
+          burstGain.gain.exponentialRampToValueAtTime(0.36, now + 0.03);
+          burstGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+          burstGain.connect(this.master);
+
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(42, now + 1.2);
+          osc.connect(burstGain);
+          osc.start(now);
+          osc.stop(now + 1.4);
+
+          const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 1.6, this.ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 900;
+          noise.connect(filter);
+          filter.connect(burstGain);
+          noise.start(now);
+          noise.stop(now + 1.6);
+        }
+      };
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
+      }
+
+      function accountAgeYears(createdAt) {
+        const diff = Date.now() - new Date(createdAt).getTime();
+        return diff / (1000 * 60 * 60 * 24 * 365.25);
+      }
+
+      function languagePalette(repos) {
+        const totals = new Map();
+        for (const repo of repos) {
+          if (!repo.language) continue;
+          totals.set(repo.language, (totals.get(repo.language) || 0) + Math.max(repo.size || 0, 1));
+        }
+        const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+        const colors = sorted.slice(0, 4).map(([language]) => languageColors[language] || '#8ac6ff');
+        if (!colors.length) colors.push('#8ac6ff', '#ff9060', '#c695ff');
+        if (colors.length === 1) colors.push('#ff9060', '#6de7ff');
+        return { colors, totals: sorted };
+      }
+
+      function severityFromActivity(activity) {
+        if (activity >= 2200) return 'BIG BANG';
+        if (activity >= 1100) return 'HYPERNOVA';
+        if (activity >= 550) return 'SUPERNOVA';
+        if (activity >= 220) return 'STELLAR FORGE';
+        return 'REPO COLLAPSAR';
+      }
+
+      function dominantLanguage(languageTotals) {
+        return languageTotals[0]?.[0] || 'Unknown';
+      }
+
+      function pickColor(index) {
+        return state.palette[index % state.palette.length];
+      }
+
+      function resize() {
+        state.width = window.innerWidth;
+        state.height = window.innerHeight;
+        state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(state.width * state.dpr);
+        canvas.height = Math.floor(state.height * state.dpr);
+        canvas.style.width = state.width + 'px';
+        canvas.style.height = state.height + 'px';
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+        createStarfield();
+      }
+
+      function createStarfield() {
+        const count = Math.floor((state.width * state.height) / 7500);
+        state.starfield = Array.from({ length: clamp(count, 120, 320) }, () => ({
+          x: Math.random() * state.width,
+          y: Math.random() * state.height,
+          r: Math.random() * 1.7 + 0.2,
+          alpha: Math.random() * 0.7 + 0.2,
+          twinkle: Math.random() * Math.PI * 2,
+          depth: Math.random() * 0.8 + 0.2
+        }));
+      }
+
+      function buildSummary(user, repos) {
+        const totalStars = repos.reduce((sum, repo) => sum + repo.stargazers_count, 0);
+        const ageYears = accountAgeYears(user.created_at);
+        const paletteData = languagePalette(repos);
+        state.palette = paletteData.colors;
+        const languageTotals = paletteData.totals;
+        const topLanguage = dominantLanguage(languageTotals);
+        const activity = Math.round(totalStars + user.public_repos * 4 + user.followers * 3 + ageYears * 24);
+        const particleCount = clamp(500 + Math.round(Math.log10(totalStars + 10) * 180) + user.public_repos * 10 + Math.min(320, user.followers * 2), 500, 2000);
+        const coreRadius = clamp(46 + Math.sqrt(totalStars + user.public_repos * 8 + 20) * 4.5, 46, Math.min(state.width, state.height) * 0.18);
+        const blastRadius = clamp(Math.min(state.width, state.height) * (0.28 + Math.log10(totalStars + 10) * 0.14 + ageYears * 0.01), 180, Math.min(state.width, state.height) * 0.75);
+        const labelCount = clamp(Math.min(repos.length, user.public_repos || repos.length), 6, 30);
+        const ringCount = clamp(1 + Math.floor(user.followers / 35), 1, 8);
+        const complexity = clamp(Math.round(ageYears * 1.5), 3, 16);
+        return {
+          totalStars,
+          ageYears,
+          topLanguage,
+          languageTotals,
+          palette: paletteData.colors,
+          activity,
+          particleCount,
+          coreRadius,
+          blastRadius,
+          labelCount,
+          ringCount,
+          complexity,
+          severity: severityFromActivity(activity)
+        };
+      }
+
+      function resetScene() {
+        state.particles = [];
+        state.orbitLabels = [];
+        state.ripples = [];
+        state.shake = 0;
+        state.posterDataUrl = '';
+        shareStatus.textContent = '';
+      }
+
+      function initializeScene(summary, repos) {
+        resetScene();
+        const centerX = state.width / 2;
+        const centerY = state.height / 2;
+
+        for (let i = 0; i < summary.particleCount; i++) {
+          const edge = Math.floor(Math.random() * 4);
+          let x = 0;
+          let y = 0;
+          if (edge === 0) {
+            x = Math.random() * state.width;
+            y = -80 - Math.random() * 200;
+          } else if (edge === 1) {
+            x = state.width + 80 + Math.random() * 200;
+            y = Math.random() * state.height;
+          } else if (edge === 2) {
+            x = Math.random() * state.width;
+            y = state.height + 80 + Math.random() * 200;
+          } else {
+            x = -80 - Math.random() * 200;
+            y = Math.random() * state.height;
+          }
+          const angle = Math.random() * Math.PI * 2;
+          const distance = blastPoint(summary.complexity, i / summary.particleCount, angle, summary.blastRadius);
+          const targetX = centerX + Math.cos(angle) * distance.x;
+          const targetY = centerY + Math.sin(angle) * distance.y;
+          state.particles.push({
+            x,
+            y,
+            vx: 0,
+            vy: 0,
+            size: Math.random() * 2.8 + 0.8,
+            glow: Math.random() * 18 + 8,
+            color: pickColor(i),
+            life: 1,
+            maxLife: 1,
+            burstAngle: angle,
+            burstSpeed: Math.random() * 10 + 4,
+            targetX,
+            targetY,
+            drift: Math.random() * Math.PI * 2,
+            alpha: Math.random() * 0.6 + 0.4
+          });
+        }
+
+        const chosenRepos = repos.slice(0, summary.labelCount);
+        state.orbitLabels = chosenRepos.map((repo, index) => ({
+          text: repo.name,
+          angle: (index / chosenRepos.length) * Math.PI * 2,
+          radius: summary.coreRadius * (1.8 + Math.random() * 2.3),
+          speed: (Math.random() * 0.004 + 0.0015) * (index % 2 ? 1 : -1),
+          color: pickColor(index),
+          alpha: 0.8,
+          offsetY: (Math.random() - 0.5) * 20,
+          explodeVx: 0,
+          explodeVy: 0
+        }));
+
+        state.ripples = Array.from({ length: summary.ringCount }, (_, index) => ({
+          radius: summary.coreRadius * (1.2 + index * 0.4),
+          alpha: 0,
+          speed: 0.8 + index * 0.12,
+          thickness: 2 + index * 0.5
+        }));
+      }
+
+      function blastPoint(complexity, ratio, angle, radius) {
+        const spiral = 0.45 + Math.sin(angle * (2 + complexity * 0.15) + ratio * complexity * 7.5) * 0.22;
+        const stretch = 0.68 + Math.cos(angle * 3.1 + ratio * 10) * 0.28;
+        const bias = Math.pow(Math.random(), 0.65);
+        return {
+          x: radius * (0.25 + bias * spiral),
+          y: radius * (0.18 + bias * stretch)
+        };
+      }
+
+      function setPhase(nextPhase) {
+        if (state.phase === nextPhase) return;
+        state.phase = nextPhase;
+        const labels = {
+          idle: 'Awaiting ignition',
+          accretion: 'Phase 1 / Accretion',
+          collapse: 'Phase 2 / Collapse',
+          detonation: 'Phase 3 / Detonation',
+          nebula: 'Phase 4 / Nebula'
+        };
+        phaseBadge.textContent = labels[nextPhase] || nextPhase;
+        audio.setPhase(nextPhase);
+      }
+
+      function updateSequence(now) {
+        if (!state.running) return;
+        const elapsed = now - state.sequenceStart;
+        let phaseTime = elapsed;
+        if (phaseTime <= phaseDurations.accretion) {
+          setPhase('accretion');
+          updateAccretion(phaseTime / phaseDurations.accretion);
+        } else if ((phaseTime -= phaseDurations.accretion) <= phaseDurations.collapse) {
+          setPhase('collapse');
+          updateCollapse(phaseTime / phaseDurations.collapse);
+        } else if ((phaseTime -= phaseDurations.collapse) <= phaseDurations.detonation) {
+          setPhase('detonation');
+          updateDetonation(phaseTime / phaseDurations.detonation);
+        } else if ((phaseTime -= phaseDurations.detonation) <= phaseDurations.nebula) {
+          setPhase('nebula');
+          updateNebula(phaseTime / phaseDurations.nebula);
+        } else {
+          finishSequence(now);
+        }
+      }
+
+      function updateAccretion(t) {
+        const centerX = state.width / 2;
+        const centerY = state.height / 2;
+        const gravity = 0.025 + t * 0.035;
+        state.shake = 0;
+
+        for (const particle of state.particles) {
+          const dx = centerX - particle.x;
+          const dy = centerY - particle.y;
+          const dist = Math.max(40, Math.hypot(dx, dy));
+          const swirl = 0.012 + t * 0.025;
+          particle.vx += dx / dist * gravity + (-dy / dist) * swirl;
+          particle.vy += dy / dist * gravity + (dx / dist) * swirl;
+          particle.vx *= 0.985;
+          particle.vy *= 0.985;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+        }
+
+        for (const label of state.orbitLabels) {
+          label.angle += label.speed * (1.2 + t * 3);
+          label.radius *= 0.9991;
+          label.alpha = 0.4 + t * 0.6;
+        }
+
+        for (const ripple of state.ripples) {
+          ripple.alpha = 0.06 + t * 0.1;
+          ripple.radius += Math.sin(t * Math.PI * 2) * ripple.speed * 0.18;
+        }
+      }
+
+      function updateCollapse(t) {
+        const centerX = state.width / 2;
+        const centerY = state.height / 2;
+        const tightness = easeInOutCubic(t);
+        state.shake = tightness * 6;
+
+        for (const particle of state.particles) {
+          const dx = centerX - particle.x;
+          const dy = centerY - particle.y;
+          const dist = Math.max(18, Math.hypot(dx, dy));
+          const contract = 0.08 + tightness * 0.14;
+          particle.vx += dx / dist * contract;
+          particle.vy += dy / dist * contract;
+          particle.vx *= 0.96;
+          particle.vy *= 0.96;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+        }
+
+        for (const label of state.orbitLabels) {
+          label.angle += label.speed * (3 + tightness * 8);
+          label.radius = Math.max(state.summary.coreRadius * 1.05, label.radius * (0.992 - tightness * 0.002));
+          label.alpha = 1 - tightness * 0.35;
+        }
+
+        state.ripples.forEach((ripple, index) => {
+          ripple.alpha = 0.14 + (1 - t) * 0.12;
+          ripple.radius = state.summary.coreRadius * (1.15 + index * 0.18 + Math.sin(t * 24 + index) * 0.05);
+        });
+      }
+
+      function updateDetonation(t) {
+        const power = easeOutCubic(t);
+        state.shake = (1 - t) * 18;
+        for (const particle of state.particles) {
+          if (!particle.exploded) {
+            particle.exploded = true;
+            particle.vx = Math.cos(particle.burstAngle) * particle.burstSpeed * (0.7 + Math.random() * 1.6);
+            particle.vy = Math.sin(particle.burstAngle) * particle.burstSpeed * (0.7 + Math.random() * 1.6);
+          }
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.vx *= 0.992;
+          particle.vy *= 0.992;
+          particle.size = Math.max(0.8, particle.size + (0.012 - t * 0.01));
+          particle.alpha = 0.6 + (1 - t) * 0.45;
+        }
+
+        state.orbitLabels.forEach((label, index) => {
+          if (!label.exploded) {
+            label.exploded = true;
+            const angle = label.angle + index * 0.18;
+            label.explodeVx = Math.cos(angle) * (3 + Math.random() * 6);
+            label.explodeVy = Math.sin(angle) * (3 + Math.random() * 6);
+          }
+          label.radius += 12;
+          label.offsetY += label.explodeVy;
+          label.alpha = Math.max(0, 0.9 - power * 1.2);
+        });
+
+        state.ripples.forEach((ripple, index) => {
+          ripple.alpha = Math.max(0, 0.35 - t * 0.3 - index * 0.03);
+          ripple.radius = state.summary.coreRadius + power * state.summary.blastRadius * (0.6 + index * 0.08);
+        });
+      }
+
+      function updateNebula(t) {
+        const settle = easeInOutCubic(t);
+        state.shake = (1 - settle) * 4;
+        for (const particle of state.particles) {
+          particle.vx *= 0.94;
+          particle.vy *= 0.94;
+          particle.x = lerp(particle.x + particle.vx, particle.targetX, 0.024 + settle * 0.048);
+          particle.y = lerp(particle.y + particle.vy, particle.targetY, 0.024 + settle * 0.048);
+          particle.size = lerp(particle.size, 1.4 + Math.sin(particle.drift + t * 6) * 0.3, 0.035);
+          particle.alpha = lerp(particle.alpha || 0.9, 0.85, 0.03);
+        }
+
+        state.orbitLabels.forEach(label => {
+          label.alpha = Math.max(0, 0.25 - settle * 0.25);
+        });
+
+        state.ripples.forEach((ripple, index) => {
+          ripple.alpha = Math.max(0, 0.12 - settle * 0.12 - index * 0.01);
+          ripple.radius = lerp(ripple.radius, state.summary.blastRadius * (0.5 + index * 0.04), 0.05);
+        });
+      }
+
+      function finishSequence(now) {
+        state.running = false;
+        state.frozenTime = now;
+        setPhase('nebula');
+        results.classList.add('visible');
+        restartButton.classList.add('visible');
+        buildPoster();
+      }
+
+      function render(now) {
+        const centerX = state.width / 2;
+        const centerY = state.height / 2;
+        const time = state.running ? now : state.frozenTime || now;
+        ctx.save();
+        ctx.clearRect(0, 0, state.width, state.height);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, state.width, state.height);
+
+        let shakeX = 0;
+        let shakeY = 0;
+        if (state.shake > 0.2) {
+          shakeX = (Math.random() - 0.5) * state.shake;
+          shakeY = (Math.random() - 0.5) * state.shake;
+        }
+        ctx.translate(shakeX, shakeY);
+
+        drawStarfield(time);
+        if (state.summary) {
+          drawCore(time, centerX, centerY);
+          drawRipples();
+          drawParticles();
+          drawOrbitLabels(centerX, centerY);
+          drawLensFlare(time, centerX, centerY);
+        }
+        drawVignette();
+        ctx.restore();
+        requestAnimationFrame(tick);
+      }
+
+      function drawStarfield(time) {
+        for (const star of state.starfield) {
+          const twinkle = 0.72 + Math.sin(time * 0.001 * star.depth + star.twinkle) * 0.28;
+          ctx.globalAlpha = star.alpha * twinkle;
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawCore(time, centerX, centerY) {
+        const summary = state.summary;
+        const glowBoost = state.phase === 'collapse' ? 1.6 : state.phase === 'detonation' ? 1.35 : 1;
+        const phasePulse = state.phase === 'accretion'
+          ? 0.88 + Math.sin(time * 0.004) * 0.08
+          : state.phase === 'collapse'
+            ? 0.95 + Math.sin(time * 0.014) * 0.16
+            : state.phase === 'detonation'
+              ? 1.25 + Math.sin(time * 0.018) * 0.14
+              : 1.05;
+        const radius = summary.coreRadius * phasePulse * (state.phase === 'collapse' ? 0.78 : state.phase === 'nebula' ? 0.38 : 1);
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2.4);
+        gradient.addColorStop(0, 'rgba(255,255,255,0.98)');
+        gradient.addColorStop(0.12, withAlpha(state.palette[0], 0.98));
+        gradient.addColorStop(0.35, withAlpha(state.palette[1] || state.palette[0], 0.48));
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 2.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 48 * glowBoost;
+        ctx.shadowColor = state.palette[0];
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      function drawRipples() {
+        const centerX = state.width / 2;
+        const centerY = state.height / 2;
+        for (const ripple of state.ripples) {
+          if (ripple.alpha <= 0.003) continue;
+          ctx.strokeStyle = withAlpha(state.palette[0], ripple.alpha);
+          ctx.lineWidth = ripple.thickness;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, ripple.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      function drawParticles() {
+        ctx.globalCompositeOperation = 'screen';
+        for (const particle of state.particles) {
+          ctx.globalAlpha = particle.alpha || 0.85;
+          ctx.shadowBlur = particle.glow;
+          ctx.shadowColor = particle.color;
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      function drawOrbitLabels(centerX, centerY) {
+        ctx.save();
+        ctx.font = `600 ${Math.max(11, Math.min(16, state.width * 0.011))}px Inter`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const label of state.orbitLabels) {
+          if (label.alpha <= 0.01) continue;
+          const x = centerX + Math.cos(label.angle) * label.radius;
+          const y = centerY + Math.sin(label.angle) * label.radius + label.offsetY;
+          ctx.globalAlpha = label.alpha;
+          ctx.fillStyle = label.color;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = label.color;
+          ctx.fillText(label.text, x, y);
+        }
+        ctx.restore();
+      }
+
+      function drawLensFlare(time, centerX, centerY) {
+        const pulse = 0.3 + Math.sin(time * 0.002) * 0.1;
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.strokeStyle = withAlpha('#ffffff', 0.09 + pulse * 0.03);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - state.width * 0.2, centerY);
+        ctx.lineTo(centerX + state.width * 0.2, centerY);
+        ctx.moveTo(centerX, centerY - state.height * 0.18);
+        ctx.lineTo(centerX, centerY + state.height * 0.18);
+        ctx.stroke();
+
+        const flare = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, state.summary.coreRadius * 5.5);
+        flare.addColorStop(0, withAlpha(state.palette[0], 0.15 + pulse * 0.05));
+        flare.addColorStop(0.4, 'rgba(255,255,255,0.03)');
+        flare.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = flare;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, state.summary.coreRadius * 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawVignette() {
+        const vignette = ctx.createRadialGradient(state.width / 2, state.height / 2, Math.min(state.width, state.height) * 0.15, state.width / 2, state.height / 2, Math.max(state.width, state.height) * 0.72);
+        const edgeAlpha = state.phase === 'collapse' ? 0.9 : 0.74;
+        vignette.addColorStop(0, 'rgba(0,0,0,0)');
+        vignette.addColorStop(0.65, 'rgba(0,0,0,0.2)');
+        vignette.addColorStop(1, `rgba(0,0,0,${edgeAlpha})`);
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, state.width, state.height);
+      }
+
+      function withAlpha(hex, alpha) {
+        const value = hex.replace('#', '');
+        const full = value.length === 3 ? value.split('').map(char => char + char).join('') : value;
+        const int = Number.parseInt(full, 16);
+        const r = (int >> 16) & 255;
+        const g = (int >> 8) & 255;
+        const b = int & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function tick(now) {
+        updateSequence(now);
+        render(now);
+      }
+
+      async function fetchGitHubData(username) {
+        const headers = {
+          Accept: 'application/vnd.github+json'
+        };
+        const userUrl = `https://api.github.com/users/${encodeURIComponent(username)}`;
+        const repoUrl = `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=stars&per_page=30`;
+        const [userResponse, reposResponse] = await Promise.all([
+          fetch(userUrl, { headers }),
+          fetch(repoUrl, { headers })
+        ]);
+
+        if (userResponse.status === 404) {
+          throw new Error('User not found. Check the handle and try again.');
+        }
+        if (userResponse.status === 403 || reposResponse.status === 403) {
+          const remaining = userResponse.headers.get('x-ratelimit-remaining') || reposResponse.headers.get('x-ratelimit-remaining');
+          if (remaining === '0') {
+            throw new Error('GitHub API rate limit hit. Wait a bit, then try again.');
+          }
+        }
+        if (!userResponse.ok) {
+          throw new Error('GitHub user lookup failed. Try again in a moment.');
+        }
+        if (!reposResponse.ok) {
+          throw new Error('GitHub repo lookup failed. Try again in a moment.');
+        }
+
+        const user = await userResponse.json();
+        const repos = await reposResponse.json();
+        if (!Array.isArray(repos)) {
+          throw new Error('GitHub repo data came back in an unexpected format.');
+        }
+        return { user, repos };
+      }
+
+      async function startExperience(username, initiatedByUser = false) {
+        const clean = username.trim().replace(/^@+/, '');
+        if (!clean) {
+          statusEl.textContent = 'Enter a GitHub username.';
+          return;
+        }
+
+        statusEl.textContent = 'Pulling public GitHub data...';
+        shareStatus.textContent = '';
+        igniteButton.disabled = true;
+        saveButton.disabled = true;
+        copyButton.disabled = true;
+        shareButton.disabled = true;
+        restartButton.classList.remove('visible');
+        results.classList.remove('visible');
+
+        if (initiatedByUser) {
+          await audio.unlock();
+        } else {
+          audio.init();
+          if (audio.ctx && audio.ctx.state !== 'running') {
+            audioHint.classList.add('visible');
+          }
+        }
+
+        try {
+          const { user, repos } = await fetchGitHubData(clean);
+          if (!repos.length) {
+            statusEl.textContent = 'No public repos found. The star will still collapse, but it will be a quiet one.';
+          } else {
+            statusEl.textContent = '';
+          }
+          state.user = user;
+          state.repos = repos;
+          state.summary = buildSummary(user, repos);
+          initializeScene(state.summary, repos);
+          state.sequenceStart = performance.now();
+          state.running = true;
+          state.frozenTime = 0;
+          state.shareUrl = `${location.origin}${location.pathname}?user=${encodeURIComponent(clean)}`;
+          const url = new URL(location.href);
+          url.searchParams.set('user', clean);
+          history.replaceState({}, '', url.toString());
+          userAvatar.src = user.avatar_url;
+          userAvatar.hidden = false;
+          userChipText.textContent = `${user.login} / ${state.summary.severity}`;
+          intro.classList.add('hidden');
+          topbar.classList.add('visible');
+          updateResultsUI();
+          phaseBadge.textContent = 'Phase 1 / Accretion';
+        } catch (error) {
+          statusEl.textContent = error.message;
+          intro.classList.remove('hidden');
+          topbar.classList.remove('visible');
+          state.running = false;
+          state.summary = null;
+        } finally {
+          igniteButton.disabled = false;
+        }
+      }
+
+      function updateResultsUI() {
+        const { user, summary, repos } = state;
+        if (!user || !summary) return;
+        usernameDisplay.textContent = user.login;
+        severityTag.textContent = summary.severity;
+        severityTag.style.boxShadow = `0 0 40px ${withAlpha(summary.palette[0], 0.18)}`;
+        posterMeta.innerHTML = [
+          `<span>${user.name || user.login}</span>`,
+          `<span>${formatNumber(user.followers)} followers</span>`,
+          `<span>Joined ${new Date(user.created_at).getFullYear()}</span>`,
+          `<span>${repos.length} top repos sampled</span>`
+        ].join('');
+        const cards = [
+          ['Public repos', formatNumber(user.public_repos)],
+          ['Total stars', formatNumber(summary.totalStars)],
+          ['Account age', `${summary.ageYears.toFixed(1)}y`],
+          ['Top language', summary.topLanguage]
+        ];
+        statsGrid.innerHTML = cards.map(([label, value]) => `
+          <div class="stat">
+            <span class="stat-label">${label}</span>
+            <span class="stat-value">${value}</span>
+          </div>
+        `).join('');
+        saveButton.disabled = false;
+        copyButton.disabled = false;
+        shareButton.disabled = false;
+      }
+
+      function buildPoster() {
+        const width = 1200;
+        const height = 630;
+        const posterCanvas = document.createElement('canvas');
+        posterCanvas.width = width;
+        posterCanvas.height = height;
+        const pctx = posterCanvas.getContext('2d');
+        const summary = state.summary;
+        const user = state.user;
+        const repos = state.repos;
+        const sx = width / state.width;
+        const sy = height / state.height;
+
+        pctx.fillStyle = '#000';
+        pctx.fillRect(0, 0, width, height);
+        const glow = pctx.createRadialGradient(width * 0.55, height * 0.5, 0, width * 0.55, height * 0.5, width * 0.45);
+        glow.addColorStop(0, withAlpha(summary.palette[0], 0.18));
+        glow.addColorStop(0.3, withAlpha(summary.palette[1] || summary.palette[0], 0.11));
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        pctx.fillStyle = glow;
+        pctx.fillRect(0, 0, width, height);
+
+        pctx.globalCompositeOperation = 'screen';
+        for (const star of state.starfield) {
+          pctx.globalAlpha = star.alpha * 0.9;
+          pctx.fillStyle = '#fff';
+          pctx.beginPath();
+          pctx.arc(star.x * sx, star.y * sy, star.r * 1.1, 0, Math.PI * 2);
+          pctx.fill();
+        }
+        for (const particle of state.particles) {
+          pctx.globalAlpha = clamp((particle.alpha || 0.85) * 1.08, 0, 1);
+          pctx.shadowBlur = particle.glow * 1.4;
+          pctx.shadowColor = particle.color;
+          pctx.fillStyle = particle.color;
+          pctx.beginPath();
+          pctx.arc(particle.x * sx, particle.y * sy, Math.max(1.2, particle.size * 1.24), 0, Math.PI * 2);
+          pctx.fill();
+        }
+        pctx.shadowBlur = 0;
+        pctx.globalAlpha = 1;
+
+        const cx = width * 0.54;
+        const cy = height * 0.5;
+        const core = pctx.createRadialGradient(cx, cy, 0, cx, cy, 180);
+        core.addColorStop(0, 'rgba(255,255,255,0.95)');
+        core.addColorStop(0.14, withAlpha(summary.palette[0], 0.82));
+        core.addColorStop(0.38, withAlpha(summary.palette[1] || summary.palette[0], 0.28));
+        core.addColorStop(1, 'rgba(0,0,0,0)');
+        pctx.fillStyle = core;
+        pctx.beginPath();
+        pctx.arc(cx, cy, 190, 0, Math.PI * 2);
+        pctx.fill();
+        pctx.globalCompositeOperation = 'source-over';
+
+        const overlay = pctx.createLinearGradient(0, 0, 0, height);
+        overlay.addColorStop(0, 'rgba(0,0,0,0.18)');
+        overlay.addColorStop(0.65, 'rgba(0,0,0,0.22)');
+        overlay.addColorStop(1, 'rgba(0,0,0,0.78)');
+        pctx.fillStyle = overlay;
+        pctx.fillRect(0, 0, width, height);
+
+        pctx.fillStyle = '#fff';
+        pctx.font = '800 62px Orbitron, Inter, sans-serif';
+        pctx.shadowColor = withAlpha(summary.palette[0], 0.48);
+        pctx.shadowBlur = 34;
+        pctx.fillText(user.login.toUpperCase(), 70, 120);
+        pctx.shadowBlur = 0;
+
+        pctx.font = '700 20px Inter, sans-serif';
+        pctx.fillStyle = withAlpha(summary.palette[0], 0.92);
+        pctx.fillText(summary.severity, 74, 160);
+
+        pctx.fillStyle = 'rgba(255,255,255,0.8)';
+        pctx.font = '500 18px Inter, sans-serif';
+        pctx.fillText(user.name || user.login, 74, 194);
+
+        const statEntries = [
+          ['Public repos', formatNumber(user.public_repos)],
+          ['Total stars', formatNumber(summary.totalStars)],
+          ['Account age', `${summary.ageYears.toFixed(1)} years`],
+          ['Top language', summary.topLanguage]
+        ];
+
+        let x = 70;
+        const y = 470;
+        for (const [label, value] of statEntries) {
+          pctx.fillStyle = 'rgba(255,255,255,0.05)';
+          pctx.strokeStyle = 'rgba(255,255,255,0.08)';
+          roundedRect(pctx, x, y, 240, 96, 18);
+          pctx.fill();
+          pctx.stroke();
+          pctx.fillStyle = 'rgba(255,255,255,0.58)';
+          pctx.font = '600 13px Inter, sans-serif';
+          pctx.fillText(label.toUpperCase(), x + 18, y + 28);
+          pctx.fillStyle = '#fff';
+          pctx.font = '800 28px Inter, sans-serif';
+          pctx.fillText(value, x + 18, y + 66);
+          x += 255;
+        }
+
+        pctx.fillStyle = 'rgba(255,255,255,0.4)';
+        pctx.font = '500 18px Inter, sans-serif';
+        pctx.fillText(`github.com/${user.login}`, width - 230, height - 38);
+
+        state.posterDataUrl = posterCanvas.toDataURL('image/png');
+      }
+
+      function roundedRect(context, x, y, width, height, radius) {
+        context.beginPath();
+        context.moveTo(x + radius, y);
+        context.lineTo(x + width - radius, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + radius);
+        context.lineTo(x + width, y + height - radius);
+        context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        context.lineTo(x + radius, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - radius);
+        context.lineTo(x, y + radius);
+        context.quadraticCurveTo(x, y, x + radius, y);
+        context.closePath();
+      }
+
+      function downloadPoster() {
+        if (!state.posterDataUrl) {
+          shareStatus.textContent = 'Poster not ready yet.';
+          return;
+        }
+        const link = document.createElement('a');
+        link.href = state.posterDataUrl;
+        link.download = `${state.user.login}-heat-death.png`;
+        link.click();
+        shareStatus.textContent = 'PNG saved.';
+      }
+
+      async function copyPoster() {
+        if (!state.posterDataUrl) {
+          shareStatus.textContent = 'Poster not ready yet.';
+          return;
+        }
+        if (!navigator.clipboard || !window.ClipboardItem) {
+          shareStatus.textContent = 'Clipboard image copy is not supported in this browser.';
+          return;
+        }
+        try {
+          const blob = await (await fetch(state.posterDataUrl)).blob();
+          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+          shareStatus.textContent = 'Poster copied to clipboard.';
+        } catch (error) {
+          shareStatus.textContent = 'Clipboard copy failed.';
+        }
+      }
+
+      async function sharePoster() {
+        if (!state.posterDataUrl) {
+          shareStatus.textContent = 'Poster not ready yet.';
+          return;
+        }
+        try {
+          const blob = await (await fetch(state.posterDataUrl)).blob();
+          const file = new File([blob], `${state.user.login}-heat-death.png`, { type: 'image/png' });
+          const shareData = {
+            title: `GitHub Heat Death / ${state.user.login}`,
+            text: `${state.user.login} rated ${state.summary.severity} on GitHub Heat Death.`,
+            url: state.shareUrl
+          };
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ ...shareData, files: [file] });
+            shareStatus.textContent = 'Shared.';
+          } else if (navigator.share) {
+            await navigator.share(shareData);
+            shareStatus.textContent = 'Shared link.';
+          } else {
+            await navigator.clipboard.writeText(state.shareUrl);
+            shareStatus.textContent = 'Web Share is unavailable. Link copied instead.';
+          }
+        } catch (error) {
+          if (error?.name !== 'AbortError') {
+            shareStatus.textContent = 'Share failed.';
+          }
+        }
+      }
+
+      function resetUI() {
+        intro.classList.remove('hidden');
+        topbar.classList.remove('visible');
+        results.classList.remove('visible');
+        restartButton.classList.remove('visible');
+        statusEl.textContent = '';
+        shareStatus.textContent = '';
+        state.running = false;
+        state.summary = null;
+        state.user = null;
+        state.repos = [];
+        userAvatar.hidden = true;
+        userAvatar.removeAttribute('src');
+        userChipText.textContent = 'No target selected';
+        phaseBadge.textContent = 'Awaiting ignition';
+        const url = new URL(location.href);
+        url.searchParams.delete('user');
+        history.replaceState({}, '', url.toString());
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await startExperience(input.value, true);
+      });
+      saveButton.addEventListener('click', downloadPoster);
+      copyButton.addEventListener('click', copyPoster);
+      shareButton.addEventListener('click', sharePoster);
+      restartButton.addEventListener('click', () => {
+        resetUI();
+        input.focus();
+      });
+      audioHint.addEventListener('click', async () => {
+        const ok = await audio.unlock();
+        if (!ok) {
+          shareStatus.textContent = 'Audio could not be enabled in this browser.';
+        }
+      });
+      window.addEventListener('resize', resize);
+
+      resize();
+      requestAnimationFrame(tick);
+
+      const params = new URLSearchParams(location.search);
+      const requestedUser = params.get('user');
+      if (requestedUser) {
+        input.value = requestedUser;
+        startExperience(requestedUser, false);
+      } else {
+        audio.init();
+      }
+    })();
+  </script>
+</body>
+</html>
